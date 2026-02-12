@@ -28,7 +28,7 @@ $(ARCHIVE) : $(OBJS)
 %.o : %.c
 	@$(CC) $(CFLAGS) -fPIC -c -o $@ $<
 
-clean :
+clean : 
 	make clean -C ./libft/
 	rm -rf $(ARCHIVE)
 	rm -rf ./libft_malloc.so
@@ -39,7 +39,13 @@ fclean : clean
 
 re : fclean all
 
-test : $(NAME)
-	$(CC) ./srcs/main.c -L -lft_malloc
+test : t_malloc
+	LD_PRELOAD=./libft_malloc.so ./test_malloc
 
-.PHONY : all clean fclean re
+t_malloc : $(NAME) $(LIBFT)
+	$(CC) ./srcs/main.c -L./libft -lft -o test_malloc
+	
+tclean :
+	rm -rf ./test_malloc
+
+.PHONY : all clean fclean re test tclean
