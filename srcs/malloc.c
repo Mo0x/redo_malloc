@@ -5,6 +5,10 @@
   doc: https://www.gingerbill.org/series/memory-allocation-strategies/
   TODO find ideal size for TINY, SMALL and LARGE, should be a multiple of 4096
   EACH zones must contain at least 100 allocations
+
+  Alloc strategy :
+  for TINY and SMALL we will use free list based allocation.
+  for LARGE we do one mmap call.
 */
 
 // idk if it will be usefull
