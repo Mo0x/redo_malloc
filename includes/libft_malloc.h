@@ -9,6 +9,10 @@
 # include <unistd.h>
 # include <stdint.h>
 
+/*
+We chose alignement 16 so it works in both 32 and 64 systems
+*/
+
 //Structures
 typedef struct	s_free_list_header
 {
