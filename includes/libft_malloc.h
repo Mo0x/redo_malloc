@@ -32,6 +32,13 @@ typedef enum	e_placement_policy
 	placement_policy_find_best
 }	t_placement_policy;
 
+typedef enum	e_zone_type
+{
+	TINY,
+	SMALL,
+	LARGE
+}	t_zone_type;
+
 typedef struct	s_free_list
 {
 	void				*data;
@@ -41,6 +48,14 @@ typedef struct	s_free_list
 	t_free_list_node	*head;
 	t_placement_policy	policy;
 }	t_free_list;
+
+typedef struct s_zone_header
+{
+	t_zone_type			type;
+	size_t				zone_size;
+	struct s_zone_header		*next;
+	
+} t_zone_header;
 
 //Mandatory part
 void	free(void *ptr);
