@@ -10,20 +10,29 @@
 # include <stdint.h>
 
 /*
-We chose alignement 16 so it works in both 32 and 64 systems
+Diagram to understand how tiny/small zone looks like:
+[ zone_header ][ block_header ][ padding ][ user payload ][ block_footer ][ block_header ] ...
 */
 
 //Structures
-typedef struct	s_free_list_header
+typedef struct	s_block_header
 {
-	size_t	block_size;
-	size_t	padding;
-}	t_free_list_header;
+	// int		is_free; //0 = used, 1 (or any other value) = free
+	// Actually may use the block_size to store is_free, if block are aligned
+	// every block_size end with 0x....0000, can use this last bit with 0 free and 1 not free
+	size_t	block_size; //size from start of header to end of footer
+	size_t	padding; //bytes between end of header and returned pointer
+	size_t	requested_size;
+}	t_block_header;
+
+typedef struct s_block_footer
+{
+	size_t	block_size; //same as in header
+}	t_block_footer;
 
 typedef struct	s_free_list_node
 {
 	struct s_free_list_node	*next;
-	size_t					block_size;
 }	t_free_list_node;
 
 typedef enum	e_placement_policy
@@ -39,23 +48,30 @@ typedef enum	e_zone_type
 	LARGE
 }	t_zone_type;
 
-typedef struct	s_free_list
+typedef struct 					s_zone_header
 {
-	void				*data;
-	size_t				size;
-	size_t				used;
-
-	t_free_list_node	*head;
-	t_placement_policy	policy;
-}	t_free_list;
-
-typedef struct s_zone_header
-{
-	t_zone_type			type;
-	size_t				zone_size;
+	t_zone_type					type;
+	size_t						zone_size;
 	struct s_zone_header		*next;
+	struct s_free_list_node		*head;
 	
-} t_zone_header;
+} 								t_zone_header;
+
+//Global Allocator
+
+typedef struct s_global_allocator
+{
+	struct s_zone_header	*tiny_head;
+	struct s_zone_header	*small_head;
+	struct s_zone_header	*large_head;
+	size_t					page_size;
+	size_t					n; //tiny from 1 .. n
+	size_t					m; //small from n+1 .. m
+	size_t					N; //n * 100, tiny zone size
+	size_t					M; //m * 100, small zone size
+	// field for mutx too but i need to refresh myself on mutex, will put it later if i dot this bonus
+	
+}	t_global_allocator;
 
 //Mandatory part
 void	free(void *ptr);
