@@ -67,8 +67,8 @@ typedef struct s_global_allocator
 	size_t					page_size;
 	size_t					n; //tiny from 1 .. n
 	size_t					m; //small from n+1 .. m
-	size_t					N; //n * 100, tiny zone size
-	size_t					M; //m * 100, small zone size
+	size_t					N; //total mmap size of one TINY zone
+	size_t					M; //total mmap size of one SMALL zone
 	// field for mutx too but i need to refresh myself on mutex, will put it later if i dot this bonus
 	
 }	t_global_allocator;
