@@ -69,6 +69,7 @@ typedef struct s_global_allocator
 	size_t					m; //small from n+1 .. m
 	size_t					N; //total mmap size of one TINY zone
 	size_t					M; //total mmap size of one SMALL zone
+	int						init_done;
 	// field for mutx too but i need to refresh myself on mutex, will put it later if i dot this bonus
 	
 }	t_global_allocator;
@@ -79,6 +80,16 @@ void 	*malloc(size_t size);
 void 	*realloc(void *ptr, size_t size);
 void 	show_alloc_mem();
 
-//helpers
+//helpers alloc
+
+int init_global_allocator(t_global_allocator *alloc);
+struct s_zone_header *get_tiny_head();
+struct s_zone_header *get_small_head();
+struct s_zone_header *get_large_head();
+size_t get_page_size();
+size_t get_small_n();
+size_t get_small_m();
+size_t get_big_n();
+size_t get_big_m();
 
 #endif

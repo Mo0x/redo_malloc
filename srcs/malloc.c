@@ -2,37 +2,21 @@
 #include <stdint.h>
 
 /*
-  doc: https://www.gingerbill.org/series/memory-allocation-strategies/
-  TODO find ideal size for TINY, SMALL and LARGE, should be a multiple of 4096
-  EACH zones must contain at least 100 allocations
+	doc: https://www.gingerbill.org/series/memory-allocation-strategies/
 
-  Alloc strategy :
-  for TINY and SMALL we will use free list based allocation.
-  for LARGE we do one mmap call.
-  We align with 16.
+	Alloc strategy :
+	for TINY and SMALL we will use free list based allocation.
+	for LARGE we do one mmap call.
+	We align with 16.
 */
-
-t_global_allocator alloc;
 
 // idk if it will be usefull
 int  is_power_of_2(uintptr_t x)
 {
-  return (x & (x - 1)) == 0;
+	 return (x & (x - 1)) == 0;
 }
 
 void  *malloc(size_t size)
 {
-  if (size)
-  {
-    //TINY
-  }
-  else if (size < 65536 + 1)
-  {
-    //SMALL 
-  }
-  else
-  {
-    //LARGE
-    //mmap()
-  }
+
 }
