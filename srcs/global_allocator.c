@@ -6,7 +6,8 @@
 
 static t_global_allocator alloc;
 
-t_global_allocator *get_alloc()
+
+t_global_allocator *get_alloc(void)
 {
 	return &alloc;
 }
