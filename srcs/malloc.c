@@ -10,6 +10,18 @@
 	We align with 16.
 */
 
+/*
+	Large memory diagram : 
+	[ zone_header ][ block_header ][ padding ][ user payload ][ block_footer ]
+	For LARGE :
+	-a LARGE allocation uses one dedicated mmap zone
+	-that zone contains exactly one block
+	-zone_size = total mapped bytes of the whole zone
+	-block_size = bytes from block header start to block footer end
+	-requested_size = exact user request before alignment
+	-returned pointer = aligned user pointer inside that one block
+*/
+
 // idk if it will be usefull
 int  is_power_of_2(uintptr_t x)
 {
@@ -32,13 +44,13 @@ void  *malloc(size_t size)
 			return ret_ptr;
 		}
 	}
-	if (size < alloc->n)
+	if (size < alloc->n + 1)
 	{
 		//tiny zone
 		write(2, "Not operational yet\n", ft_strlen("Not operational yet\n"));
 		return ret_ptr;
 	}
-	else if (size < alloc->m)
+	else if (size < alloc->m + 1)
 	{
 		//small zone
 		write(2, "Not operational yet\n", ft_strlen("Not operational yet\n"));
