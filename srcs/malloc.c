@@ -22,12 +22,6 @@
 	-returned pointer = aligned user pointer inside that one block
 */
 
-// idk if it will be usefull
-int  is_power_of_2(uintptr_t x)
-{
-	 return (x & (x - 1)) == 0;
-}
-
 void  *malloc(size_t size)
 {
 	t_global_allocator *alloc = get_alloc();

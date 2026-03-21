@@ -8,6 +8,9 @@
 # include <sys/resource.h>
 # include <unistd.h>
 # include <stdint.h>
+# include <limits.h>
+# include <sys/types.h>
+# include <errno.h>
 
 /*
 Diagram to understand how tiny/small zone looks like:
@@ -20,7 +23,7 @@ typedef struct	s_block_header
 	// int		is_free; //0 = used, 1 (or any other value) = free
 	// Actually may use the block_size to store is_free, if block are aligned
 	// every block_size end with 0x....0000, can use this last bit with 0 free and 1 not free
-	size_t	block_size; //size from start of header to end of footer
+	size_t	block_size; //size from start of header to end of footer DOES NOT include zone_header
 	size_t	padding; //bytes between end of header and returned pointer
 	size_t	requested_size;
 }	t_block_header;
@@ -51,7 +54,7 @@ typedef enum	e_zone_type
 typedef struct 					s_zone_header
 {
 	t_zone_type					type;
-	size_t						zone_size;
+	size_t						zone_size; // 
 	struct s_zone_header		*next;
 	struct s_free_list_node		*head;
 	
@@ -69,7 +72,7 @@ typedef struct s_global_allocator
 	size_t					m; //small from n+1 .. m
 	size_t					N; //total mmap size of one TINY zone
 	size_t					M; //total mmap size of one SMALL zone
-	int						init_done;
+	int						is_init;
 	// field for mutx too but i need to refresh myself on mutex, will put it later if i dot this bonus
 	
 }	t_global_allocator;
@@ -83,13 +86,9 @@ void 	show_alloc_mem();
 //helpers alloc
 
 int init_global_allocator(t_global_allocator *alloc);
-struct s_zone_header *get_tiny_head();
-struct s_zone_header *get_small_head();
-struct s_zone_header *get_large_head();
-size_t get_page_size();
-size_t get_small_n();
-size_t get_small_m();
-size_t get_big_n();
-size_t get_big_m();
+t_global_allocator *get_alloc(void);
+ssize_t calc_padding_from_address(uintptr_t ptr, uintptr_t alignment);
+ssize_t round_requested_size_to_alignment(size_t requested, uintptr_t alignment);
+
 
 #endif
