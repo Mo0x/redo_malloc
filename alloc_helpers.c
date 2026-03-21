@@ -22,19 +22,20 @@ ssize_t calc_padding_from_address(uintptr_t ptr, uintptr_t alignment)
 		return (a - modulo);
 }
 
+// IF -1 set errno ENOMEM !
 ssize_t round_requested_size_to_alignment(size_t requested, uintptr_t alignment)
 {
-	if (!(is_power_of_2(alignment)))
-		return -1;
+	// if (!(is_power_of_2(alignment)))
+	// 	return -1;
 	uintptr_t modulo = requested & (alignment - 1);
 
-	if (!(requested % alignment))
+	if (!(modulo))
 		return requested;
 	else
 	{
-		if (requested >  SSIZE_MAX + (alignment - modulo))
+		if (requested >  SIZE_MAX + (alignment + modulo))
 		{
-			errno = ENOMEM; 
+			//errno = ENOMEM; 
 			return -1;
 		}
 		return (requested + (alignment - modulo)); //have to make sure we don't overflow idk how 
