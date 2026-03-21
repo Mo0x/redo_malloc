@@ -28,7 +28,9 @@ int init_global_allocator(t_global_allocator *alloc)
 	alloc->n = TINY_THRESHOLD;
 	alloc->m = SMALL_THRESHOLD;
 
+	alloc->alignment = ALIGNMENT;
 	size_t worst_padding = ALIGNMENT - 1;
+	alloc->worst_padding = worst_padding;
 	
 	size_t worst_tiny_block = sizeof(t_block_header) + worst_padding + alloc->n + sizeof(t_block_footer);
 	size_t worst_small_block = sizeof(t_block_header) + worst_padding + alloc->m + sizeof(t_block_footer);

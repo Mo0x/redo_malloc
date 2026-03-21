@@ -56,7 +56,8 @@ typedef struct 					s_zone_header
 	t_zone_type					type;
 	size_t						zone_size; // 
 	struct s_zone_header		*next;
-	struct s_free_list_node		*head;
+	struct s_free_list_node		*free_list_node;
+	struct s_block_header		*block_header;
 	
 } 								t_zone_header;
 
@@ -72,6 +73,8 @@ typedef struct s_global_allocator
 	size_t					m; //small from n+1 .. m
 	size_t					N; //total mmap size of one TINY zone
 	size_t					M; //total mmap size of one SMALL zone
+	size_t					alignment;
+	size_t					worst_padding;
 	int						is_init;
 	// field for mutx too but i need to refresh myself on mutex, will put it later if i dot this bonus
 	

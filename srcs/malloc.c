@@ -1,4 +1,6 @@
 #include "libft_malloc.h"
+#include <asm-generic/errno-base.h>
+#include <stdatomic.h>
 #include <stdint.h>
 
 /*
@@ -22,7 +24,47 @@
 	-returned pointer = aligned user pointer inside that one block
 */
 
-void  *malloc(size_t size)
+
+/*
+	checklist for the LARGE path:
+
+	raw request valid?
+	aligned payload valid?
+	block size valid?
+	zone size valid?
+	page-rounded zone size valid?
+	mmap length > 0?
+*/
+void 	*malloc_large(size_t size, t_global_allocator *alloc)
+{
+	uintptr_t ret = NULL;
+	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + alloc->worst_padding + sizeof(t_block_footer);
+	if (size > SIZE_MAX - metadata_size)
+	{
+		errno = ENOMEM;
+		return (void *)ret;
+	}
+	size_t real_size = size + metadata_size;
+	size_t remainder = real_size % alloc->page_size;
+	size_t rounded_size = 0;
+	if (!remainder)
+		rounded_size = real_size;
+	else
+	{
+		size_t extra = alloc->page_size - remainder;
+		if (real_size > SIZE_MAX - extra)
+		{
+			errno = ENOMEM;
+			return (void *)ret;
+		}
+		else
+			rounded_size = real_size + extra;
+	} 
+
+	ret = mmap(???, rounded_size)
+}
+
+void	*malloc(size_t size)
 {
 	t_global_allocator *alloc = get_alloc();
 	int flag_fail = 0; 
@@ -51,19 +93,8 @@ void  *malloc(size_t size)
 		return ret_ptr;
 	}
 	else
-	{		
-		//large zone
-		header_ptr = mmap(header+ptr, size, ?????);
-		if (!alloc->large_head)
-		{
-			header_ptr = init_zone(alloc->large_head); //future function that will initiate the head of a zone
-			
-		}
-		else
-		{
-			//some list add back of some kind 
-
-		}		
-		
+	{
+		ret_ptr = malloc_large(size, alloc);
+		return ret_ptr;
 	}
 }
