@@ -3,6 +3,7 @@
 #define TINY_THRESHOLD 128
 #define SMALL_THRESHOLD 1024
 #define ALIGNMENT 16
+#define BLOCKS_PER_ZONE 100
 
 static t_global_allocator alloc;
 
@@ -102,6 +103,7 @@ static int	round_up_size(size_t value, size_t multiple, size_t *out)
 // 	return 0;
 // v}
 
+// v2 refactored, cleaner, using helpers, safer version with overflow checks on arithmetics
 // return -1 if failed init
 int	init_global_allocator(t_global_allocator *alloc)
 {

@@ -24,7 +24,36 @@
 	-returned pointer = aligned user pointer inside that one block
 */
 
+static t_zone_header *get_large_zone_from_map(void *map_ret)
+{
+	return (t_zone_header *)map_ret;
+}
 
+static t_block_header *get_large_block_from_zone(t_zone_header *zone)
+{
+	// we use char * here to said we want the size of a pointer, apparently void * arithmetic isnt
+	// guarented on every compiler so char * is standard
+	// zone + sizeof(t_zone_header) <-- wrong because (for t_zone_header = 40) :
+	// zone + 40; -> 40 * 40 = 1600 <- not what we want here, that's why we use char *
+	return ((t_block_header *)((char *)zone + sizeof(t_zone_header)));
+}
+
+static void fill_large_zone_metadata(void *map_ret, size_t rounded_size, t_global_allocator *alloc)
+{
+	t_zone_header *zone;
+	t_block_header *block;
+
+	zone = get_large_zone_from_map(map_ret);
+	block = get_large_block_from_zone(zone);
+
+	zone->type = LARGE;
+	zone->zone_size = rounded_size;
+	zone->next = alloc->large_head;
+	zone->free_list_node = NULL;
+	zone->block_header = block;
+
+	alloc->large_head = zone;
+}
 /*
 	checklist for the LARGE path:
 
@@ -61,10 +90,14 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 		else
 			rounded_size = real_size + extra;
 	} 
-
-	map_ret = mmap(???, rounded_size);
+	// MAP_PRIVATE means you get a private copy-on-write mapping: changes are not shared with other processes and are not written back to an underlying file.
+	// MAP_ANON means the mapping is not backed by any file and is zero-initialized
+	map_ret = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (map_ret == MAP_FAILED)
 		return NULL;
+	//fill of header zone
+	fill_large_zone_metadata(map_ret, rounded_size, alloc);
+	
 }
 
 void	*malloc(size_t size)
