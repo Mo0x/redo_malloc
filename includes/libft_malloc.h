@@ -23,9 +23,9 @@ typedef struct	s_block_header
 	// int		is_free; //0 = used, 1 (or any other value) = free
 	// Actually may use the block_size to store is_free, if block are aligned
 	// every block_size end with 0x....0000, can use this last bit with 0 free and 1 not free
-	size_t	block_size; //size from start of header to end of footer DOES NOT include zone_header
+	size_t	block_size; //size from start of header to end of footer DOES NOT include zone_header and is ALIGNED
 	size_t	padding; //bytes between end of header and returned pointer
-	size_t	requested_size;
+	size_t	requested_size; //user asked size
 }	t_block_header;
 
 typedef struct s_block_footer
@@ -54,7 +54,7 @@ typedef enum	e_zone_type
 typedef struct 					s_zone_header
 {
 	t_zone_type					type;
-	size_t						zone_size; // 
+	size_t						zone_size; // full mapped length 
 	struct s_zone_header		*next;
 	struct s_free_list_node		*free_list_node;
 	struct s_block_header		*block_header;
@@ -88,6 +88,7 @@ void 	show_alloc_mem();
 
 //helpers alloc
 
+int is_power_of_2(uintptr_t x);
 int init_global_allocator(t_global_allocator *alloc);
 t_global_allocator *get_alloc(void);
 ssize_t calc_padding_from_address(uintptr_t ptr, uintptr_t alignment);

@@ -1,7 +1,7 @@
 #include "libft_malloc.h"
-#include <asm-generic/errno-base.h>
 #include <stdatomic.h>
 #include <stdint.h>
+#include <sys/mman.h>
 
 /*
 	doc: https://www.gingerbill.org/series/memory-allocation-strategies/
@@ -37,7 +37,8 @@
 */
 void 	*malloc_large(size_t size, t_global_allocator *alloc)
 {
-	uintptr_t ret = NULL;
+	void *ret = NULL;
+	void *map_ret = 0; 
 	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + alloc->worst_padding + sizeof(t_block_footer);
 	if (size > SIZE_MAX - metadata_size)
 	{
@@ -61,7 +62,9 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 			rounded_size = real_size + extra;
 	} 
 
-	ret = mmap(???, rounded_size)
+	map_ret = mmap(???, rounded_size);
+	if (map_ret == MAP_FAILED)
+		return NULL;
 }
 
 void	*malloc(size_t size)
