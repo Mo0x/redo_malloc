@@ -41,3 +41,8 @@ ssize_t round_requested_size_to_alignment(size_t requested, uintptr_t alignment)
 		return (requested + (alignment - modulo)); //have to make sure we don't overflow idk how 
 	}
 }
+
+int is_aligned(uintptr_t ptr, size_t alignment)
+{
+	return (ptr % alignment == 0 ? 1 : 0);
+}

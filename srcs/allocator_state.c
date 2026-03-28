@@ -12,7 +12,7 @@ t_global_allocator *get_alloc()
 	return &alloc;
 }
 
-static int	safe_add_size(size_t a, size_t b, size_t *out)
+int	safe_add_size(size_t a, size_t b, size_t *out)
 {
 	if (a > SIZE_MAX - b)
 		return -1;
@@ -20,7 +20,7 @@ static int	safe_add_size(size_t a, size_t b, size_t *out)
 	return 0;
 }
 
-static int	safe_mul_size(size_t a, size_t b, size_t *out)
+int	safe_mul_size(size_t a, size_t b, size_t *out)
 {
 	if (a != 0 && b > SIZE_MAX / a)
 		return -1;
@@ -28,8 +28,7 @@ static int	safe_mul_size(size_t a, size_t b, size_t *out)
 	return 0;
 }
 
-
-static int	round_up_size(size_t value, size_t multiple, size_t *out)
+int	round_up_size(size_t value, size_t multiple, size_t *out)
 {
 	size_t remainder;
 	size_t extra;

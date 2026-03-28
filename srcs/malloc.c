@@ -14,16 +14,26 @@
 */
 
 /*
-	Large memory diagram : 
-	[ zone_header ][ block_header ][ padding ][ user payload ][ block_footer ]
-	For LARGE :
-	-a LARGE allocation uses one dedicated mmap zone
-	-that zone contains exactly one block
-	-zone_size = total mapped bytes of the whole zone
-	-block_size = bytes from block header start to block footer end
-	-requested_size = exact user request before alignment
-	-returned pointer = aligned user pointer inside that one block
+	Large memory diagram :
+	[ zone_header ][ zone_to_block_padding ][ block_header ][ user_padding ]
+	[ user area ............................................. ][ block_footer ]
+
+	For large:
+	- one LARGE allocation uses one dedicated mmap zone
+	- that zone contains exactly one block
+	- zone_size = total mapped bytes of the whole zone
+	- block_size = bytes from block header start to block footer end
+	- requested_size = exact user request before alignment
+	- returned pointer = aligned user pointer inside that one block
+	- the block footer is stored at the very end of the mapped zone
 */
+
+static void *malloc_large_fail(void *map_ret, size_t rounded_size)
+{
+	if (map_ret && map_ret != MAP_FAILED)
+		munmap(map_ret, rounded_size);
+	return NULL;
+}
 
 static t_zone_header *get_large_zone_from_map(void *map_ret)
 {
@@ -54,47 +64,43 @@ static t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t
 	mmap length > 0?
 */
 
-static uintptr_t get_raw_user_ptr(t_block_header *block)
-{
-	return ((uintptr_t)block + sizeof(t_block_header));
-}
+// helpers not needed for large alloc, perhaps reuse for tiny/small, we will see
 
-static ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment)
-{
-	return (calc_padding_from_address(raw_user, alignment));
-}
+// static uintptr_t get_raw_user_ptr(t_block_header *block)
+// {
+// 	return ((uintptr_t)block + sizeof(t_block_header));
+// }
 
-static uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding)
-{
-	return (raw_user + padding);
-}
+// static ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment)
+// {
+// 	return (calc_padding_from_address(raw_user, alignment));
+// }
+
+// static uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding)
+// {
+// 	return (raw_user + padding);
+// }
 
 void 	*malloc_large(size_t size, t_global_allocator *alloc)
 {
 	uintptr_t ret = 0;
 	void *map_ret = 0; 
 	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + (2 * alloc->worst_padding) + sizeof(t_block_footer);
-	if (size > SIZE_MAX - metadata_size)
+
+	size_t real_size = 0;
+	size_t rounded_size = 0;
+
+	if (safe_add_size(size, metadata_size, &real_size) == -1)
 	{
 		errno = ENOMEM;
-		return (void *)ret;
+		return (NULL);
 	}
-	size_t real_size = size + metadata_size;
-	size_t remainder = real_size % alloc->page_size;
-	size_t rounded_size = 0;
-	if (!remainder)
-		rounded_size = real_size;
-	else
+	if (round_up_size(real_size, alloc->page_size, &rounded_size) == -1)
 	{
-		size_t extra = alloc->page_size - remainder;
-		if (real_size > SIZE_MAX - extra)
-		{
-			errno = ENOMEM;
-			return (void *)ret;
-		}
-		else
-			rounded_size = real_size + extra;
-	} 
+		errno = ENOMEM;
+		return (NULL);
+	}
+ 
 	// MAP_PRIVATE means you get a private copy-on-write mapping: changes are not shared with other processes and are not written back to an underlying file.
 	// MAP_ANON means the mapping is not backed by any file and is zero-initialized
 	map_ret = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
@@ -104,35 +110,33 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	t_zone_header *zone = get_large_zone_from_map(map_ret);
 	t_block_header *block = compute_large_block_from_zone(zone, alloc->alignment);
 	if (!block)
-	{
-		munmap(map_ret, rounded_size);
-		return NULL;
-	}
+		return (malloc_large_fail(map_ret, rounded_size));
+	if (!is_aligned((uintptr_t)block, alloc->alignment))
+		return (malloc_large_fail(map_ret, rounded_size));
+		
 	uintptr_t raw_user = (uintptr_t)block + sizeof(t_block_header);
 	ssize_t user_padding = calc_padding_from_address(raw_user, alloc->alignment);
 	if (user_padding < 0)
-	{
-		munmap(map_ret, rounded_size);
-		return NULL;
-	}
-	ret = raw_user + (uintptr_t)user_padding; 
+		return (malloc_large_fail(map_ret, rounded_size));
 
+	ret = raw_user + (uintptr_t)user_padding; 
+	if (!is_aligned(ret, alloc->alignment))
+		return (malloc_large_fail(map_ret, rounded_size));
+	
 	uintptr_t zone_end = (uintptr_t)zone + rounded_size; 
 	uintptr_t footer_start = zone_end - sizeof(t_block_footer);
 	t_block_footer *footer = (t_block_footer *)footer_start;
 	size_t block_size = zone_end - (uintptr_t)block;
+	if (block_size % alloc->alignment)
+		return (malloc_large_fail(map_ret, rounded_size));
 	if (ret > footer_start)
-	{
-		munmap(map_ret, rounded_size);
-		return NULL;
-	}
+		return (malloc_large_fail(map_ret, rounded_size));
 	size_t payload_capacity = footer_start - ret;
 
 	if (size > payload_capacity)
-	{
-		munmap(map_ret, rounded_size);
-		return NULL;
-	}
+		return (malloc_large_fail(map_ret, rounded_size));
+
+	
 	//fill block
 	{
 		block->block_size = block_size;
@@ -146,7 +150,6 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	
 	//fill zone
 	{
-		zone = get_large_zone_from_map(map_ret);
 		zone->type = LARGE;
 		zone->zone_size = rounded_size;
 		zone->next = alloc->large_head;
@@ -163,6 +166,8 @@ void	*malloc(size_t size)
 	int flag_fail = 0; 
 	void *ret_ptr = NULL;
 	void *header_ptr = NULL;
+	if (size == 0)
+		size = 1; // Policy from is, will see if that makes sense to keep it
 
 	if (!alloc->is_init)
 	{

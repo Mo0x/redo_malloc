@@ -93,6 +93,10 @@ int init_global_allocator(t_global_allocator *alloc);
 t_global_allocator *get_alloc(void);
 ssize_t calc_padding_from_address(uintptr_t ptr, uintptr_t alignment);
 ssize_t round_requested_size_to_alignment(size_t requested, uintptr_t alignment);
+int		is_aligned(uintptr_t ptr, size_t alignment);
+int	round_up_size(size_t value, size_t multiple, size_t *out);
+int	safe_add_size(size_t a, size_t b, size_t *out);
+int	safe_mul_size(size_t a, size_t b, size_t *out);
 
 
 #endif
