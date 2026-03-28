@@ -2,6 +2,7 @@
 #include <stdatomic.h>
 #include <stdint.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 /*
 	doc: https://www.gingerbill.org/series/memory-allocation-strategies/
@@ -29,31 +30,19 @@ static t_zone_header *get_large_zone_from_map(void *map_ret)
 	return (t_zone_header *)map_ret;
 }
 
-static t_block_header *get_large_block_from_zone(t_zone_header *zone)
+// We add a padding between zone_header and block_header
+static t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment)
 {
-	// we use char * here to said we want the size of a pointer, apparently void * arithmetic isnt
-	// guarented on every compiler so char * is standard
-	// zone + sizeof(t_zone_header) <-- wrong because (for t_zone_header = 40) :
-	// zone + 40; -> 40 * 40 = 1600 <- not what we want here, that's why we use char *
-	return ((t_block_header *)((char *)zone + sizeof(t_zone_header)));
+	uintptr_t	raw_block;
+	ssize_t		padding;
+
+	raw_block = (uintptr_t)zone + sizeof(t_zone_header);
+	padding = calc_padding_from_address(raw_block, alignment);
+	if (padding < 0)
+		return NULL;
+	return ((t_block_header *)(raw_block + (uintptr_t)padding));
 }
 
-static void fill_large_zone_metadata(void *map_ret, size_t rounded_size, t_global_allocator *alloc)
-{
-	t_zone_header *zone;
-	t_block_header *block;
-
-	zone = get_large_zone_from_map(map_ret);
-	block = get_large_block_from_zone(zone);
-
-	zone->type = LARGE;
-	zone->zone_size = rounded_size;
-	zone->next = alloc->large_head;
-	zone->free_list_node = NULL;
-	zone->block_header = block;
-
-	alloc->large_head = zone;
-}
 /*
 	checklist for the LARGE path:
 
@@ -64,11 +53,27 @@ static void fill_large_zone_metadata(void *map_ret, size_t rounded_size, t_globa
 	page-rounded zone size valid?
 	mmap length > 0?
 */
+
+static uintptr_t get_raw_user_ptr(t_block_header *block)
+{
+	return ((uintptr_t)block + sizeof(t_block_header));
+}
+
+static ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment)
+{
+	return (calc_padding_from_address(raw_user, alignment));
+}
+
+static uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding)
+{
+	return (raw_user + padding);
+}
+
 void 	*malloc_large(size_t size, t_global_allocator *alloc)
 {
-	void *ret = NULL;
+	uintptr_t ret = 0;
 	void *map_ret = 0; 
-	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + alloc->worst_padding + sizeof(t_block_footer);
+	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + (2 * alloc->worst_padding) + sizeof(t_block_footer);
 	if (size > SIZE_MAX - metadata_size)
 	{
 		errno = ENOMEM;
@@ -95,9 +100,61 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	map_ret = mmap(NULL, rounded_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (map_ret == MAP_FAILED)
 		return NULL;
-	//fill of header zone
-	fill_large_zone_metadata(map_ret, rounded_size, alloc);
+	// Now zone is mapped -> we prepare the zone of the metadata;
+	t_zone_header *zone = get_large_zone_from_map(map_ret);
+	t_block_header *block = compute_large_block_from_zone(zone, alloc->alignment);
+	if (!block)
+	{
+		munmap(map_ret, rounded_size);
+		return NULL;
+	}
+	uintptr_t raw_user = (uintptr_t)block + sizeof(t_block_header);
+	ssize_t user_padding = calc_padding_from_address(raw_user, alloc->alignment);
+	if (user_padding < 0)
+	{
+		munmap(map_ret, rounded_size);
+		return NULL;
+	}
+	ret = raw_user + (uintptr_t)user_padding; 
+
+	uintptr_t zone_end = (uintptr_t)zone + rounded_size; 
+	uintptr_t footer_start = zone_end - sizeof(t_block_footer);
+	t_block_footer *footer = (t_block_footer *)footer_start;
+	size_t block_size = zone_end - (uintptr_t)block;
+	if (ret > footer_start)
+	{
+		munmap(map_ret, rounded_size);
+		return NULL;
+	}
+	size_t payload_capacity = footer_start - ret;
+
+	if (size > payload_capacity)
+	{
+		munmap(map_ret, rounded_size);
+		return NULL;
+	}
+	//fill block
+	{
+		block->block_size = block_size;
+		block->padding = user_padding;
+		block->requested_size = size;
+	}
+	//fill footer
+	{
+		footer->block_size = block_size;
+	}
 	
+	//fill zone
+	{
+		zone = get_large_zone_from_map(map_ret);
+		zone->type = LARGE;
+		zone->zone_size = rounded_size;
+		zone->next = alloc->large_head;
+		zone->free_list_node = NULL;
+		zone->block_header = block;
+	}
+	alloc->large_head = zone;
+	return (void *)ret;
 }
 
 void	*malloc(size_t size)
