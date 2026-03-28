@@ -165,7 +165,7 @@ void	*malloc(size_t size)
 	t_global_allocator *alloc = get_alloc();
 	int flag_fail = 0; 
 	void *ret_ptr = NULL;
-	void *header_ptr = NULL;
+	//void *header_ptr = NULL;
 	if (size == 0)
 		size = 1; // Policy from is, will see if that makes sense to keep it
 
