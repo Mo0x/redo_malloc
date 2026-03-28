@@ -83,9 +83,33 @@ static t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t
 
 void 	*malloc_large(size_t size, t_global_allocator *alloc)
 {
+	// perhaps move all declaration at the top, 42 norm style, will see
 	uintptr_t ret = 0;
 	void *map_ret = 0; 
-	size_t metadata_size = sizeof(t_zone_header) + sizeof(t_block_header) + (2 * alloc->worst_padding) + sizeof(t_block_footer);
+	size_t metadata_size;
+	size_t two_paddings;
+
+	metadata_size = sizeof(t_zone_header);
+	if (safe_add_size(metadata_size, sizeof(t_block_header), &metadata_size) == -1)
+	{
+		errno = ENOMEM;
+		return (NULL);
+	}
+	if (safe_add_size(alloc->worst_padding, alloc->worst_padding, &two_paddings) == -1)
+	{
+		errno = ENOMEM;
+		return (NULL);
+	}
+	if (safe_add_size(metadata_size, two_paddings, &metadata_size) == -1)
+	{
+		errno = ENOMEM;
+		return (NULL);
+	}
+	if (safe_add_size(metadata_size, sizeof(t_block_footer), &metadata_size) == -1)
+	{
+		errno = ENOMEM;
+		return (NULL);
+	}
 
 	size_t real_size = 0;
 	size_t rounded_size = 0;
@@ -140,7 +164,7 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	//fill block
 	{
 		block->block_size = block_size;
-		block->padding = user_padding;
+		block->padding = (size_t)user_padding;
 		block->requested_size = size;
 	}
 	//fill footer
