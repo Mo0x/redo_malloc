@@ -2,6 +2,8 @@ CC = gcc
 SRCS = ./srcs/malloc.c \
 	   ./srcs/free.c \
 	   ./srcs/realloc.c \
+	   ./srcs/allocator_state.c \
+	   ./srcs/alloc_helpers.c \
 	   ./srcs/show_alloc_mem.c
 OBJS = $(patsubst %.c, %.o, $(SRCS))
 INCDIRS = ./includes
@@ -40,10 +42,12 @@ fclean : clean
 re : fclean all
 
 test : t_malloc
-	LD_PRELOAD=./libft_malloc.so ./test_malloc
+	./test_malloc
+	#LD_PRELOAD=./libft_malloc.so ./test_malloc
 
 t_malloc : $(NAME) $(LIBFT)
-	$(CC) ./srcs/main.c -L./libft -lft -o test_malloc
+		$(CC) $(CFLAGS) ./srcs/main.c $(OBJS) $(LIBFT) -o test_malloc
+	#$(CC) ./srcs/main.c -L./libft -lft -o test_malloc
 	
 tclean :
 	rm -rf ./test_malloc

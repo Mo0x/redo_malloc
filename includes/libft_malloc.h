@@ -98,5 +98,9 @@ int	round_up_size(size_t value, size_t multiple, size_t *out);
 int	safe_add_size(size_t a, size_t b, size_t *out);
 int	safe_mul_size(size_t a, size_t b, size_t *out);
 
+//tmp for testing
+
+void *malloc_large(size_t size, t_global_allocator *alloc);
+//int free_large(void *ptr, t_global_allocator *alloc);
 
 #endif

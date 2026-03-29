@@ -205,13 +205,13 @@ void	*malloc(size_t size)
 	if (size < alloc->n + 1)
 	{
 		//tiny zone
-		write(2, "Not operational yet\n", ft_strlen("Not operational yet\n"));
+		write(2, "TINY Not operational yet\n", ft_strlen("TINY Not operational yet\n"));
 		return ret_ptr;
 	}
 	else if (size < alloc->m + 1)
 	{
 		//small zone
-		write(2, "Not operational yet\n", ft_strlen("Not operational yet\n"));
+		write(2, "SMALL Not operational yet\n", ft_strlen("SMALL Not operational yet\n"));
 		return ret_ptr;
 	}
 	else
