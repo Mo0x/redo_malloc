@@ -41,7 +41,7 @@ static t_zone_header *get_large_zone_from_map(void *map_ret)
 }
 
 // We add a padding between zone_header and block_header
-static t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment)
+t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment)
 {
 	uintptr_t	raw_block;
 	ssize_t		padding;
@@ -66,20 +66,6 @@ static t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t
 
 // helpers not needed for large alloc, perhaps reuse for tiny/small, we will see
 
-// static uintptr_t get_raw_user_ptr(t_block_header *block)
-// {
-// 	return ((uintptr_t)block + sizeof(t_block_header));
-// }
-
-// static ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment)
-// {
-// 	return (calc_padding_from_address(raw_user, alignment));
-// }
-
-// static uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding)
-// {
-// 	return (raw_user + padding);
-// }
 
 void 	*malloc_large(size_t size, t_global_allocator *alloc)
 {
