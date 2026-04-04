@@ -32,11 +32,12 @@ int main (void)
   large_alloc2 = malloc(1000002);
   large_alloc1[2] = 'b';
   large_alloc2[3] = 'c';
-    free(large_alloc1);
+    //lib64free(large_alloc1);
   //  free(large_alloc2);
-  free(large_alloc);
-  free(large_alloc);
+  //free(large_alloc);
+  //free(large_alloc);
  // write(2, ft_itoa((int)(uintptr_t)large_alloc), 32);
+ show_alloc_mem();
 
   return 0;
 }

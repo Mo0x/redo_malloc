@@ -39,7 +39,7 @@ static void show_large_zone(t_zone_header *zone)
 		uintptr_t user_start = get_ret_ptr(user_raw, block->padding);
 		print_addr_fd((void *)user_start, 1);
 		write(1, " - ", 3);
-		uintptr_t user_end = user_start - block->requested_size; 
+		uintptr_t user_end = user_start + block->requested_size; 
 		print_addr_fd((void *) user_end, 1);
 		write(1, " : ", 3);
 		ft_putszt_fd(block->requested_size, 1);
