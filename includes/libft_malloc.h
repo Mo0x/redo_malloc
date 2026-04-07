@@ -97,6 +97,10 @@ int		is_aligned(uintptr_t ptr, size_t alignment);
 int	round_up_size(size_t value, size_t multiple, size_t *out);
 int	safe_add_size(size_t a, size_t b, size_t *out);
 int	safe_mul_size(size_t a, size_t b, size_t *out);
+uintptr_t get_raw_user_ptr(t_block_header *block);
+ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment);
+uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding);
+t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment);
 
 //tmp for testing
 
