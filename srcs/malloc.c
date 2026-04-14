@@ -1,4 +1,5 @@
 #include "libft_malloc.h"
+#include <bits/types/stack_t.h>
 #include <stdatomic.h>
 #include <stdint.h>
 #include <sys/mman.h>
@@ -28,6 +29,12 @@
 	- the block footer is stored at the very end of the mapped zone
 */
 
+t_block_header *get_block_from_free_node(t_free_list_node *node)
+{
+	uintptr_t header_addr = (uintptr_t)node - sizeof(t_block_header);
+	return (t_block_header *)header_addr;
+}
+
 static void *malloc_large_fail(void *map_ret, size_t rounded_size)
 {
 	if (map_ret && map_ret != MAP_FAILED)
@@ -41,7 +48,7 @@ static t_zone_header *get_large_zone_from_map(void *map_ret)
 }
 
 // We add a padding between zone_header and block_header
-t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment)
+t_block_header *compute_first_block_from_zone(t_zone_header *zone, size_t alignment)
 {
 	uintptr_t	raw_block;
 	ssize_t		padding;
@@ -52,6 +59,7 @@ t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignm
 		return NULL;
 	return ((t_block_header *)(raw_block + (uintptr_t)padding));
 }
+
 
 /*
 	checklist for the LARGE path:
@@ -118,7 +126,7 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 		return NULL;
 	// Now zone is mapped -> we prepare the zone of the metadata;
 	t_zone_header *zone = get_large_zone_from_map(map_ret);
-	t_block_header *block = compute_large_block_from_zone(zone, alloc->alignment);
+	t_block_header *block = compute_first_block_from_zone(zone, alloc->alignment);
 	if (!block)
 		return (malloc_large_fail(map_ret, rounded_size));
 	if (!is_aligned((uintptr_t)block, alloc->alignment))
@@ -170,6 +178,77 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	return (void *)ret;
 }
 
+/*
+	-> choose tiny or small
+	-> search existing zones of that type
+	-> inside each zone, search a free block big enough
+	-> if found, allocate from that free block
+	    -> maybe split it
+	    -> update free list
+	    -> fill allocated block metadata
+	    -> return user pointer
+	-> if none found, mmap a new zone
+	    -> initialize zone with one large free block
+	    -> allocate from that block
+	    -> return user pointer
+*/
+
+t_zone_header *create_pool_zone(t_zone_type zone_type, t_zone_header **head, t_global_allocator *alloc)
+{
+	void *map_ret;
+	size_t zone_size;
+	uintptr_t zone_end;
+	t_block_footer *footer;
+	t_free_list_node *first_node;
+	size_t block_size;
+
+	zone_type == TINY ? zone_size = alloc->N : zone_size = alloc->M; 
+	map_ret = mmap(NULL, zone_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	if (map_ret == MAP_FAILED)
+		return NULL;
+	t_zone_header *zone = (t_zone_header *) map_ret;
+	t_block_header *block = compute_first_block_from_zone(zone, alloc->alignment);
+	if (!block)
+		malloc_large_fail(map_ret, zone_size);
+	zone_end = (uintptr_t)zone + zone_size;
+	block_size = zone_end - (uintptr_t)block;
+	footer = (t_block_footer *)(zone_end - sizeof(t_block_footer));
+	first_node = (t_free_list_node *)((uintptr_t)block + sizeof(t_block_header));
+	block->block_size = block_size;
+	block->padding = 0;
+	block->requested_size = 0;
+	footer->block_size = block_size;
+	first_node->next = NULL;
+	zone->type = zone_type;
+	zone->zone_size = zone_size;
+	zone->next = NULL;
+	zone->free_list_node = first_node;
+	zone->block_header = block;
+	if (zone_type == TINY)
+	{
+		if (alloc->tiny_head)
+			alloc->tiny_head->next = zone;
+		else
+			alloc->tiny_head = zone;
+	}
+	else
+	{
+		if (alloc->small_head)
+			alloc->small_head->next = zone;
+		else
+			alloc->tiny_head = zone;
+	}
+		
+
+	return zone;
+}
+
+void *malloc_tiny(size_t size, t_global_allocator *alloc)
+{
+	uintptr_t ret = 0;
+	void *map_ret = NULL;
+}
+
 void	*malloc(size_t size)
 {
 	t_global_allocator *alloc = get_alloc();
@@ -191,6 +270,7 @@ void	*malloc(size_t size)
 	if (size < alloc->n + 1)
 	{
 		//tiny zone
+		ret_ptr = malloc_tiny(size, alloc);
 		write(2, "TINY Not operational yet\n", ft_strlen("TINY Not operational yet\n"));
 		return ret_ptr;
 	}

@@ -100,10 +100,13 @@ int	safe_mul_size(size_t a, size_t b, size_t *out);
 uintptr_t get_raw_user_ptr(t_block_header *block);
 ssize_t compute_user_padding(uintptr_t raw_user, size_t alignment);
 uintptr_t get_ret_ptr(uintptr_t raw_user, size_t padding);
-t_block_header *compute_large_block_from_zone(t_zone_header *zone, size_t alignment);
+t_block_header *compute_first_block_from_zone(t_zone_header *zone, size_t alignment);
+t_block_header *get_block_from_free_node(t_free_list_node *node);
 
 //tmp for testing
 
+void *malloc_tiny(size_t size, t_global_allocator *alloc);
+void *malloc_small(size_t size, t_global_allocator *alloc);
 void *malloc_large(size_t size, t_global_allocator *alloc);
 //int free_large(void *ptr, t_global_allocator *alloc);
 

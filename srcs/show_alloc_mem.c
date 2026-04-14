@@ -47,7 +47,7 @@ static size_t show_large_zone(t_zone_header *zone)
 	print_addr_fd((void *)zone, 1);
 	print_nl(1);
 
-	t_block_header *block = compute_large_block_from_zone(zone, alloc->alignment); 
+	t_block_header *block = compute_block_from_zone(zone, alloc->alignment); 
 	return print_alloc_line_block(block);
 }
 
@@ -72,7 +72,7 @@ void  show_alloc_mem()
 	curr = alloc->large_head;
 	while (curr != NULL)
 	{
-		if(safe_add_size(total, show_large_zone(curr), &total))
+		if(safe_add_size(total, show_large_zone(curr), &total) == -1)
 		{
 			//perhaps some erno value here ?
 			write(2, "overflow\n", 9);
