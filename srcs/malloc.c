@@ -202,7 +202,10 @@ t_zone_header *create_pool_zone(t_zone_type zone_type, t_zone_header **head, t_g
 	t_free_list_node *first_node;
 	size_t block_size;
 
-	zone_type == TINY ? zone_size = alloc->N : zone_size = alloc->M; 
+	if (zone_type == TINY)
+		zone_size = alloc->N;
+	else
+		zone_size = alloc->M;
 	map_ret = mmap(NULL, zone_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (map_ret == MAP_FAILED)
 		return NULL;
@@ -236,7 +239,7 @@ t_zone_header *create_pool_zone(t_zone_type zone_type, t_zone_header **head, t_g
 		if (alloc->small_head)
 			alloc->small_head->next = zone;
 		else
-			alloc->tiny_head = zone;
+			alloc->small_head = zone;
 	}
 		
 
@@ -247,6 +250,8 @@ void *malloc_tiny(size_t size, t_global_allocator *alloc)
 {
 	uintptr_t ret = 0;
 	void *map_ret = NULL;
+	(void)ret;
+	return map_ret;
 }
 
 void	*malloc(size_t size)

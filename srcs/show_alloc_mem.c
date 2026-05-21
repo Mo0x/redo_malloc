@@ -47,7 +47,7 @@ static size_t show_large_zone(t_zone_header *zone)
 	print_addr_fd((void *)zone, 1);
 	print_nl(1);
 
-	t_block_header *block = compute_block_from_zone(zone, alloc->alignment); 
+	t_block_header *block = compute_first_block_from_zone(zone, alloc->alignment); 
 	return print_alloc_line_block(block);
 }
 
