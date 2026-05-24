@@ -193,28 +193,37 @@ void 	*malloc_large(size_t size, t_global_allocator *alloc)
 	    -> return user pointer
 */
 
-t_zone_header *create_pool_zone(t_zone_type zone_type, t_zone_header **head, t_global_allocator *alloc)
+t_zone_header *create_pool_zone(t_zone_type zone_type,
+	t_zone_header **head,
+	t_global_allocator *alloc)
 {
-	void *map_ret;
-	size_t zone_size;
-	uintptr_t zone_end;
-	t_block_footer *footer;
-	t_free_list_node *first_node;
-	size_t block_size;
+	void				*map_ret;
+	size_t				zone_size;
+	uintptr_t			zone_end;
+	t_zone_header		*zone;
+	t_block_header		*block;
+	t_block_footer		*footer;
+	t_free_list_node	*first_node;
+	size_t				block_size;
 
 	if (zone_type == TINY)
 		zone_size = alloc->N;
 	else
 		zone_size = alloc->M;
-	map_ret = mmap(NULL, zone_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
+	map_ret = mmap(NULL, zone_size, PROT_READ | PROT_WRITE,
+			MAP_ANON | MAP_PRIVATE, -1, 0);
 	if (map_ret == MAP_FAILED)
-		return NULL;
-	t_zone_header *zone = (t_zone_header *) map_ret;
-	t_block_header *block = compute_first_block_from_zone(zone, alloc->alignment);
+		return (NULL);
+	zone = (t_zone_header *)map_ret;
+	block = compute_first_block_from_zone(zone, alloc->alignment);
 	if (!block)
-		malloc_large_fail(map_ret, zone_size);
+		return (malloc_large_fail(map_ret, zone_size));
 	zone_end = (uintptr_t)zone + zone_size;
 	block_size = zone_end - (uintptr_t)block;
+	if (block_size < sizeof(t_block_header)
+		+ sizeof(t_free_list_node)
+		+ sizeof(t_block_footer))
+		return (malloc_large_fail(map_ret, zone_size));
 	footer = (t_block_footer *)(zone_end - sizeof(t_block_footer));
 	first_node = (t_free_list_node *)((uintptr_t)block + sizeof(t_block_header));
 	block->block_size = block_size;
@@ -224,26 +233,11 @@ t_zone_header *create_pool_zone(t_zone_type zone_type, t_zone_header **head, t_g
 	first_node->next = NULL;
 	zone->type = zone_type;
 	zone->zone_size = zone_size;
-	zone->next = NULL;
 	zone->free_list_node = first_node;
 	zone->block_header = block;
-	if (zone_type == TINY)
-	{
-		if (alloc->tiny_head)
-			alloc->tiny_head->next = zone;
-		else
-			alloc->tiny_head = zone;
-	}
-	else
-	{
-		if (alloc->small_head)
-			alloc->small_head->next = zone;
-		else
-			alloc->small_head = zone;
-	}
-		
-
-	return zone;
+	zone->next = *head;
+	*head = zone;
+	return (zone);
 }
 
 void *malloc_tiny(size_t size, t_global_allocator *alloc)
